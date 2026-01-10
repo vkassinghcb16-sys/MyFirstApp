@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Task Organizer (Dynamic Filters)</title>
+    <style>
+        /* Base Styling */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f2f5;
+            padding: 10px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 450px; 
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            min-height: 100vh;
+        }
+
+        /* --- Header/Navigation --- */
+        .header {
+            background-color: #6200EE; 
+            color: white;
+            padding: 16px;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0 10px;
+        }
+        .header-btn.save {
+            font-size: 16px;
+        }
+
+        /* --- Form/List Sections --- */
+        .form-section, .list-section {
+            padding: 16px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        input[type="text"], input[type="number"], input[type="date"], textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .mandatory-tag {
+            color: red;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+        .submit-btn {
+            background-color: #03DAC5; 
+            color: black;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        /* --- View Toggle --- */
+        .view-toggle {
+            display: flex;
+            margin: 10px 16px 0;
+            background-color: #f0f2f5;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .view-toggle button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background-color: transparent;
+            font-size: 14px;
+            color: #555;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .view-toggle button.active {
+            background-color: #6200EE;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- Sort Filters --- */
+        .sort-filters {
+            padding: 0 16px 10px;
+        }
+        .sort-filters label {
+            font-size: 12px;
+            color: #555;
+            margin-right: 5px;
+            font-weight: bold;
+        }
+        .sort-filters select {
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            width: auto;
+            font-size: 12px;
+            height: 30px;
+            margin-top: 5px;
+        }
+
+        /* --- List Styling --- */
+        #taskList {
+            min-height: 200px;
+        }
+        .task-card {
+            display: flex;
+            background-color: #fff;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .priority-bar {
+            width: 8px;
+        }
+        .content {
+            flex-grow: 1;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+        .top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .task-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #333;
+        }
+        .action-score {
+            font-size: 0.9em;
+            color: #888;
+            font-weight: 500;
+        }
+        .bottom-row {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 4px;
+        }
+        .complete-btn {
+            padding: 12px;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Priority Colors */
+        .high { background-color: #E91E63; } 
+        .medium { background-color: #FFC107; } 
+        .low { background-color: #4CAF50; } 
+        .completed .task-title, .completed .bottom-row {
+            text-decoration: line-through;
+            color: #aaa;
+        }
+        .completed .priority-bar {
+            background-color: #ccc !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <div id="listScreen">
+        <div class="header">
+            <span>✨ AI Task Organizer</span>
+            <button class="header-btn" onclick="showScreen('inputScreen')">+</button>
+        </div>
+
+        <div class="view-toggle">
+            <button id="btnToday" class="active" onclick="toggleView('today')">Today's Priority</button>
+            <button id="btnAll" onclick="toggleView('all')">All Tasks</button>
+        </div>
+
+        <div class="sort-filters">
+            <label for="sortSelector">Sort By:</label>
+            <select id="sortSelector" onchange="renderTasks()">
+                <option value="score">AI Action Score (Default)</option>
+                <option value="dueDate">Due Date (Earliest)</option>
+                <option value="timeRequired">Time Required (Shortest)</option>
+                <option value="priority">Priority (Highest)</option>
+                <option value="startDate">Start Date (Earliest)</option>
+            </select>
+        </div>
+        
+        <div class="list-section">
+            <h3 id="listTitle" style="color: #6200EE;">Today's Focus</h3>
+            <div id="taskList">
+                </div>
+            <p id="emptyMessage" style="text-align: center; color: #aaa; margin-top: 30px; display: none;">No tasks for today! Enjoy the break, or switch to 'All Tasks'.</p>
+        </div>
+    </div>
+    
+    <div id="inputScreen" style="display: none;">
+        <div class="header">
+            <button class="header-btn" onclick="showScreen('listScreen')">←</button>
+            <span>➕ Add New Task</span>
+            <button class="header-btn save" onclick="saveTask()">SAVE</button>
+        </div>
+        
+        <div class="form-section">
+            <p style="text-align: center; color: #555;">Mandatory fields drive the AI prioritization engine.</p>
+
+            <div class="form-group"><label for="taskName">Task Name <span class="mandatory-tag">*</span></label><input type="text" id="taskName" required></div>
+            <div class="form-group">
+                <label>Time Required (H:M) <span class="mandatory-tag">*</span></label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="number" id="timeHours" placeholder="Hours" min="0" value="0" style="flex: 1;" required>
+                    <input type="number" id="timeMinutes" placeholder="Minutes" min="0" max="59" value="30" style="flex: 1;" required>
+                </div>
+            </div>
+            <div class="form-group"><label for="dueDate">Due Date <span class="mandatory-tag">*</span></label><input type="date" id="dueDate" required></div>
+            <div class="form-group">
+                <label for="priority">Priority Level <span class="mandatory-tag">*</span></label>
+                <select id="priority"><option value="3">High</option><option value="2" selected>Medium</option><option value="1">Low</option></select>
+            </div>
+
+            <h4 style="color: #6200EE; border-top: 1px solid #eee; padding-top: 10px;">Optional Details</h4>
+            <div class="form-group"><label for="description">Description/Remarks</label><textarea id="description" rows="3"></textarea></div>
+            <div class="form-group"><label for="startDate">Start Date</label><input type="date" id="startDate"></div>
+            <div class="form-group">
+                <label for="location">Location</label>
+                <select id="location"><option value="">-- Select --</option><option value="Home">Home</option><option value="Store">Store</option><option value="Online">Online</option><option value="Other">Other</option></select>
+            </div>
+            <div class="form-group">
+                <label for="recurrence">Recurrence</label>
+                <select id="recurrence">
+                    <option value="none" selected>None</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center;">
+                <input type="checkbox" id="blocksTask">
+                <label for="blocksTask" style="margin-bottom: 0;">This task blocks a future task</label>
+            </div>
+
+            <button class="submit-btn" onclick="saveTask()">SAVE TASK & VIEW LIST</button>
+            <div style="height: 40px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- JS UTILITIES & SETUP ---
+    const AS_WEIGHTS = { priority: 5, urgency: 10, quickWin: 2, blocking: 4 };
+    let currentView = 'today';
+
+    // Mock data for initial load. Note: Dates are relative to the user's current time.
+    const mockTasks = [
+        { id: Date.now() + 1, taskName: "Fix Critical Bug", timeRequiredMinutes: 45, dueDate: Date.now() + (1000 * 60 * 60 * 3), priorityLevel: 3, isBlocking: true, isComplete: false }, 
+        { id: Date.now() + 2, taskName: "Send Follow-up Email", timeRequiredMinutes: 10, dueDate: Date.now() + (1000 * 60 * 60 * 24), priorityLevel: 2, isBlocking: false, isComplete: false }, 
+        { id: Date.now() + 3, taskName: "Start Feature X Design", timeRequiredMinutes: 180, dueDate: Date.now() + (1000 * 60 * 60 * 48), priorityLevel: 3, isBlocking: true, isComplete: false }, 
+        { id: Date.now() + 4, taskName: "Organize Desktop Folders", timeRequiredMinutes: 60, dueDate: Date.now() + (1000 * 60 * 60 * 24 * 7), priorityLevel: 1, isBlocking: false, isComplete: false }, 
+        { id: Date.now() + 5, taskName: "Review Budget Docs", timeRequiredMinutes: 90, dueDate: Date.now() + (1000 * 60 * 60 * 4), priorityLevel: 2, isBlocking: false, isComplete: false } 
+    ];
+
+    function getTasks() {
+        const stored = localStorage.getItem('tasks');
+        if (!stored) {
+            localStorage.setItem('tasks', JSON.stringify(mockTasks));
+            return mockTasks;
+        }
+        return JSON.parse(stored);
+    }
+
+    function saveTasks(tasks) {
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    // --- AI PRIORITIZATION LOGIC (Calculates Action Score) ---
+    function calculateActionScore(task) {
+        if (task.isComplete) return -1.0;
+        const now = Date.now();
+        
+        const diff = task.dueDate - now;
+        const daysUntilDue = Math.max(1, diff / (1000 * 60 * 60 * 24));
+        const urgencyScore = AS_WEIGHTS.urgency * (1.0 / daysUntilDue);
+
+        const priorityScore = AS_WEIGHTS.priority * task.priorityLevel;
+
+        const timeRequiredHours = Math.max(0.1, task.timeRequiredMinutes / 60.0);
+        const quickWinScore = AS_WEIGHTS.quickWin * (1.0 / timeRequiredHours);
+
+        const blockingScore = task.isBlocking ? AS_WEIGHTS.blocking : 0.0;
+
+        return urgencyScore + priorityScore + quickWinScore + blockingScore;
+    }
+
+    function prioritizeTasks(tasks) {
+        // Calculate scores before sorting
+        tasks.forEach(task => {
+            task.actionScore = calculateActionScore(task);
+        });
+
+        // 1. Get the current sort type from the dropdown
+        const sortType = document.getElementById('sortSelector').value;
+        
+        let sortedTasks = tasks;
+
+        // 2. Apply chosen manual sort filter, otherwise use Action Score
+        switch (sortType) {
+            case 'dueDate':
+                sortedTasks = tasks.sort((a, b) => a.dueDate - b.dueDate);
+                break;
+            case 'timeRequired':
+                sortedTasks = tasks.sort((a, b) => a.timeRequiredMinutes - b.timeRequiredMinutes);
+                break;
+            case 'priority':
+                // Sort by priority (descending) then due date (ascending) for ties
+                sortedTasks = tasks.sort((a, b) => {
+                    if (b.priorityLevel !== a.priorityLevel) return b.priorityLevel - a.priorityLevel;
+                    return a.dueDate - b.dueDate;
+                });
+                break;
+            case 'startDate':
+                // Sort by Start Date (ascending), pushing tasks without a start date to the end
+                sortedTasks = tasks.sort((a, b) => {
+                    if (!a.startDate) return 1;
+                    if (!b.startDate) return -1;
+                    return a.startDate - b.startDate;
+                });
+                break;
+            case 'score':
+            default:
+                // Default sort: Action Score (descending)
+                sortedTasks = tasks.sort((a, b) => b.actionScore - a.actionScore);
+                break;
+        }
+
+        // Ensure completed tasks are always at the bottom, regardless of score or sort filter
+        return sortedTasks.sort((a, b) => {
+            if (a.isComplete && !b.isComplete) return 1;
+            if (!a.isComplete && b.isComplete) return -1;
+            return 0; 
+        });
+    }
+
+    // --- VIEW RENDERING & FILTERING ---
+    function renderTasks() {
+        let tasks = getTasks();
+        tasks = prioritizeTasks(tasks); // Sort tasks based on selected filter/AI score
+
+        let filteredTasks = tasks;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today
+
+        if (currentView === 'today') {
+            filteredTasks = tasks.filter(task => {
+                const dueDate = new Date(task.dueDate);
+                dueDate.setHours(0, 0, 0, 0);
+                const isDueToday = dueDate.getTime() === today.getTime();
+                
+                const isStartToday = task.startDate && new Date(task.startDate).getTime() === today.getTime();
+
+                return (isDueToday || isStartToday) && !task.isComplete;
+            });
+            document.getElementById('listTitle').textContent = "Today's Focus";
+            document.getElementById('emptyMessage').textContent = "No urgent tasks for today! Enjoy the break, or switch to 'All Tasks'.";
+        } else {
+            document.getElementById('listTitle').textContent = "All Tasks (Sorted)";
+            document.getElementById('emptyMessage').textContent = "No tasks entered yet. Add a new task!";
+        }
+
+        const taskListEl = document.getElementById('taskList');
+        taskListEl.innerHTML = ''; // Clear existing list
+
+        if (filteredTasks.length === 0) {
+            document.getElementById('emptyMessage').style.display = 'block';
+            return;
+        } else {
+            document.getElementById('emptyMessage').style.display = 'none';
+        }
+
+        filteredTasks.forEach(task => {
+            const timeStr = `${Math.floor(task.timeRequiredMinutes / 60)}h ${task.timeRequiredMinutes % 60}m`;
+            const dateStr = new Date(task.dueDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
+            const priorityClass = task.priorityLevel === 3 ? 'high' : task.priorityLevel === 2 ? 'medium' : 'low';
+
+            const scoreDisplay = document.getElementById('sortSelector').value === 'score' 
+                                ? `AS: ${task.actionScore.toFixed(2)}` 
+                                : `P: ${task.priorityLevel}`;
+
+            const cardHtml = `
+                <div class="task-card ${task.isComplete ? 'completed' : ''}" data-id="${task.id}">
+                    <div class="priority-bar ${priorityClass}"></div>
+                    <div class="content">
+                        <div class="top-row">
+                            <span class="task-title">${task.taskName} ${task.isBlocking ? '(BLOCKS)' : ''}</span>
+                            <span class="action-score">${scoreDisplay}</span>
+                        </div>
+                        <div class="bottom-row">
+                            Due: ${dateStr} | Time: ${timeStr} ${task.location ? '| Loc: ' + task.location : ''}
+                        </div>
+                    </div>
+                    <div class="complete-btn">
+                        <input type="checkbox" ${task.isComplete ? 'checked' : ''} onchange="toggleComplete(${task.id})">
+                    </div>
+                </div>
+            `;
+            taskListEl.insertAdjacentHTML('beforeend', cardHtml);
+        });
+    }
+
+    // --- USER ACTIONS ---
+    function showScreen(id) {
+        document.getElementById('listScreen').style.display = (id === 'listScreen' ? 'block' : 'none');
+        document.getElementById('inputScreen').style.display = (id === 'inputScreen' ? 'block' : 'none');
+        if (id === 'listScreen') {
+            renderTasks();
+        }
+    }
+    
+    function toggleView(view) {
+        currentView = view;
+        document.getElementById('btnToday').classList.remove('active');
+        document.getElementById('btnAll').classList.remove('active');
+        document.getElementById(`btn${view.charAt(0).toUpperCase() + view.slice(1)}`).classList.add('active');
+        renderTasks();
+    }
+
+    function toggleComplete(id) {
+        let tasks = getTasks();
+        const task = tasks.find(t => t.id === id);
+        if (task) {
+            task.isComplete = !task.isComplete;
+            saveTasks(tasks);
+            renderTasks();
+        }
+    }
+
+    function saveTask() {
+        const name = document.getElementById('taskName').value;
+        const h = parseInt(document.getElementById('timeHours').value) || 0;
+        const m = parseInt(document.getElementById('timeMinutes').value) || 0;
+        const due = document.getElementById('dueDate').value;
+        const priority = parseInt(document.getElementById('priority').value);
+        
+        if (!name || (h === 0 && m === 0) || !due || !priority) {
+            alert("Please fill in all mandatory fields (Name, Time, Due Date, Priority).");
+            return;
+        }
+
+        const tasks = getTasks();
+        const newTask = {
+            id: Date.now(),
+            taskName: name,
+            timeRequiredMinutes: (h * 60) + m,
+            dueDate: new Date(due).getTime() + (1000 * 60 * 60 * 12), // Adds 12 hours to prevent timezone issues
+            priorityLevel: priority,
+            isBlocking: document.getElementById('blocksTask').checked,
+            description: document.getElementById('description').value || null,
+            startDate: document.getElementById('startDate').value ? new Date(document.getElementById('startDate').value).getTime() : null,
+            location: document.getElementById('location').value || null,
+            recurrenceType: document.getElementById('recurrence').value,
+            isComplete: false
+        };
+
+        tasks.push(newTask);
+        saveTasks(tasks);
+        
+        // Clear form
+        document.getElementById('taskName').value = '';
+        document.getElementById('timeHours').value = '0';
+        document.getElementById('timeMinutes').value = '30';
+        document.getElementById('dueDate').value = '';
+        document.getElementById('priority').value = '2';
+
+        showScreen('listScreen');
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+        // Set a default value for Due Date to simplify testing
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        document.getElementById('dueDate').valueAsDate = tomorrow;
+        
+        renderTasks();
+    });
+</script>
+
+</body>
+</html>
