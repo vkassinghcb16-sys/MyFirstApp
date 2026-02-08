@@ -448,6 +448,7 @@
     
     function toggleView(view) {
         currentView = view;
+        localStorage.setItem('currentView', currentView);
         document.getElementById('btnToday').classList.remove('active');
         document.getElementById('btnAll').classList.remove('active');
         document.getElementById(`btn${view.charAt(0).toUpperCase() + view.slice(1)}`).classList.add('active');
@@ -510,7 +511,11 @@
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         document.getElementById('dueDate').valueAsDate = tomorrow;
-        
+        currentView = localStorage.getItem('currentView') || 'today';
+
+        document.getElementById('btnToday').classList.remove('active');
+        document.getElementById('btnAll').classList.remove('active');
+        document.getElementById(`btn${currentView.charAt(0).toUpperCase() + currentView.slice(1)}`).classList.add('active');
         renderTasks();
     });
 </script>
