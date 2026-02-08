@@ -443,7 +443,7 @@
         } else {
             document.getElementById('emptyMessage').style.display = 'none';
         }
-        const now = Date.now();
+        
         filteredTasks.forEach(task => {
             const isOverdue = task.dueDate < now && !task.isComplete;
 
