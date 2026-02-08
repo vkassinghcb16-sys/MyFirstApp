@@ -189,6 +189,35 @@
         .completed .priority-bar {
             background-color: #ccc !important;
         }
+        /* --- Deadline Highlighting --- */
+.overdue {
+    border: 2px solid #E53935;
+    background-color: #FFEBEE;
+}
+
+.due-soon {
+    border: 2px solid #FB8C00;
+    background-color: #FFF3E0;
+}
+
+.deadline-badge {
+    font-size: 0.75em;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+}
+
+.badge-overdue {
+    background-color: #E53935;
+    color: white;
+}
+
+.badge-soon {
+    background-color: #FB8C00;
+    color: white;
+}
+
     </style>
 </head>
 <body>
@@ -383,7 +412,7 @@
     function renderTasks() {
         let tasks = getTasks();
         tasks = prioritizeTasks(tasks); // Sort tasks based on selected filter/AI score
-
+        const now = Date.now();
         let filteredTasks = tasks;
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Start of today
@@ -414,8 +443,18 @@
         } else {
             document.getElementById('emptyMessage').style.display = 'none';
         }
-
+        const now = Date.now();
         filteredTasks.forEach(task => {
+            const isOverdue = task.dueDate < now && !task.isComplete;
+
+const hoursToDue = (task.dueDate - now) / (1000 * 60 * 60);
+
+const isDueSoon =
+    currentView === 'today' &&
+    hoursToDue > 0 &&
+    hoursToDue <= 6 &&
+    !task.isComplete;
+
             const timeStr = `${Math.floor(task.timeRequiredMinutes / 60)}h ${task.timeRequiredMinutes % 60}m`;
             const dateStr = new Date(task.dueDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
             const priorityClass = task.priorityLevel === 3 ? 'high' : task.priorityLevel === 2 ? 'medium' : 'low';
